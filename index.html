@@ -1,13 +1,6 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ABC123XYZ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-B5KGYQ00LV');
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shajra Excel Pro - Reflow & Print Optimized</title>
@@ -19,6 +12,11 @@
             --global-fw: 800;
             --global-bw: 3.5px;
             --empty-bw: 3px;
+            
+            /* Header & Footer Styling Variables */
+            --hf-fs: 13px;
+            --hf-fw: 700;
+            --hf-bw: 2px;
         }
 
         * {
@@ -35,7 +33,7 @@
         .excel-cell {
             width: 160px;
             height: 80px;
-            border: var(--empty-bw) solid #475569; /* Dynamic border for all empty boxes */
+            border: var(--empty-bw) solid #475569;
             background-color: transparent;
             position: relative;
             cursor: pointer;
@@ -80,17 +78,59 @@
             font-weight: calc(var(--cell-fw, var(--global-fw)) - 200); 
             color: #2d3e2b; 
         }
+
+        /* 270 Degree Vertical Text Styling */
+        .rotate-270 {
+            width: 80px !important;
+            height: 160px !important;
+            position: absolute;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) rotate(-90deg) !important;
+            bottom: auto !important;
+            right: auto !important;
+        }
         
+        /* Header & Footer Custom Borders */
+        .hf-container-top {
+            border-top: var(--hf-bw) solid #000;
+            border-left: var(--hf-bw) solid #000;
+            border-right: var(--hf-bw) solid #000;
+        }
+        .hf-container-bottom {
+            border: var(--hf-bw) solid #000;
+        }
+        .hf-border-b {
+            border-bottom: var(--hf-bw) solid #000;
+        }
+
         .excel-row-header {
-            border-bottom: 1px solid #1e3a2f;
             padding: 10px 8px;
             min-height: 44px;
             outline: none;
             background: #ffffff;
             color: #000; 
-            font-weight: 800; 
+            font-size: calc(var(--hf-fs) + 6px);
+            font-weight: calc(var(--hf-fw) + 100);
         }
-        .excel-row-header:last-child { border-bottom: 2px solid #1e3a2f; }
+        
+        /* Grid Aligned Header/Footer Cells (Now gapless & flex) */
+        .hf-cell {
+            flex: 1; /* Stretch to fill space seamlessly */
+            min-height: 30px;
+            padding: 6px 4px;
+            text-align: center;
+            font-weight: var(--hf-fw);
+            font-size: var(--hf-fs);
+            outline: none;
+            word-break: break-word;
+            cursor: text;
+        }
+        .hf-cell:focus {
+            background-color: #f1f5f9;
+            box-shadow: inset 0 0 0 1.5px #3b82f6;
+            z-index: 20;
+        }
         
         /* ---------------- PRINT STYLES ---------------- */
         @media print {
@@ -133,7 +173,6 @@
             .page-container:last-child { page-break-after: auto !important; break-after: auto !important; }
             svg { overflow: visible !important; }
 
-            /* Ensure thick empty boxes print powerfully */
             .excel-cell:not(.has-data) {
                 border: var(--empty-bw, 3px) solid #475569 !important;
                 background: transparent !important;
@@ -156,6 +195,9 @@
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed top-4 right-4 bg-slate-800 text-white px-5 py-3 rounded shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none z-[200] font-bold"></div>
 
     <!-- TOP MENU BAR -->
     <div class="print:hidden w-full bg-[#1e293b] text-gray-200 flex items-center px-4 py-1.5 text-sm z-[60] shadow-md relative shrink-0">
@@ -187,8 +229,13 @@
                 <h3 class="font-bold text-slate-500 border-b pb-1 mb-3 text-xs uppercase tracking-wide">फ़ाइल (File)</h3>
                 <div class="flex flex-col gap-2">
                     <button onclick="document.getElementById('file-input').click()" class="w-full text-left px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded border border-slate-200 text-sm font-medium flex justify-between items-center transition">
-                        <span>आयात (Import)</span><span class="text-[10px] text-slate-400 font-mono">.json</span>
+                        <span>नया आयात (New Import)</span><span class="text-[10px] text-slate-400 font-mono">.json</span>
                     </button>
+                    <!-- MERGE PARTS OPTION -->
+                    <button onclick="document.getElementById('merge-input').click()" class="w-full text-left px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded border border-blue-200 text-sm font-bold flex justify-between items-center transition">
+                        <span>पार्ट्स जोड़ें (Merge)</span><span class="text-[10px] text-blue-500 font-mono">+ .json</span>
+                    </button>
+
                     <button onclick="handleExport()" class="w-full text-left px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded border border-slate-200 text-sm font-medium flex justify-between items-center transition">
                         <span>निर्यात (Export)</span><span class="text-[10px] text-slate-400 font-mono">.json</span>
                     </button>
@@ -274,6 +321,24 @@
             <!-- Design Options -->
             <div>
                 <h3 class="font-bold text-slate-500 border-b pb-1 mb-3 text-xs uppercase tracking-wide">डिज़ाइन (Design)</h3>
+                
+                <!-- HEADER FOOTER CONTROLS -->
+                <p class="text-xs font-bold text-slate-400 mb-2">हेडर और फुटर (HEADER/FOOTER)</p>
+                <div class="flex flex-col gap-2 mb-4 text-sm font-medium bg-slate-50 p-2 rounded border border-slate-200">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">टेक्स्ट साइज़</span>
+                        <input type="number" id="hf-fs" value="13" class="w-20 border border-slate-300 rounded px-1 text-center bg-white" onchange="updateGlobalStyle('hfFontSize', this.value)">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">बोल्डनेस</span>
+                        <input type="number" id="hf-fw" step="100" min="100" max="900" value="700" class="w-20 border border-slate-300 rounded px-1 text-center bg-white" onchange="updateGlobalStyle('hfFontWeight', this.value)">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">लाइन मोटाई</span>
+                        <input type="number" id="hf-bw" step="0.5" min="0" value="2" class="w-20 border border-slate-300 rounded px-1 text-center bg-white" onchange="updateGlobalStyle('hfBorderWidth', this.value)">
+                    </div>
+                </div>
+
                 <p class="text-xs font-bold text-slate-400 mb-2">सबके लिए (ALL BOXES)</p>
                 <div class="flex flex-col gap-2 mb-4 text-sm font-medium bg-slate-50 p-2 rounded border border-slate-200">
                     <div class="flex justify-between items-center">
@@ -328,7 +393,9 @@
         </div>
     </div>
 
+    <!-- Hidden File Inputs -->
     <input type="file" id="file-input" onchange="handleImport(event)" class="hidden" accept=".json">
+    <input type="file" id="merge-input" onchange="handleMerge(event)" class="hidden" accept=".json" multiple>
 
     <!-- MAIN TOOLBAR -->
     <div class="print:hidden w-full bg-white border-b border-gray-300 z-50 p-2 shadow-sm flex flex-col gap-2 shrink-0">
@@ -351,6 +418,9 @@
                 <button onclick="setEntryType('male')" class="bg-white border border-slate-400 px-2.5 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-100 transition rounded">पुरुष</button>
                 <button onclick="setEntryType('female')" class="bg-white border border-slate-400 px-2.5 py-1.5 text-xs font-bold text-pink-600 hover:bg-pink-50 transition rounded">बेटी (△)</button>
                 <button onclick="setEntryType('wife')" class="bg-white border border-slate-400 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 transition rounded">पत्नी (♡)</button>
+
+                <div class="w-px h-6 bg-slate-300 mx-0.5"></div>
+                <button id="btn-vertical" onclick="toggleVertical()" class="bg-white border border-slate-400 px-2.5 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-100 transition rounded" title="टेक्स्ट को 270 डिग्री घुमाएं">लंबवत (270°)</button>
                 
                 <div class="w-px h-6 bg-slate-300 mx-0.5"></div>
                 
@@ -373,8 +443,12 @@
         
         let state = {
             gridParams: { rows: 7, cols: 7 }, 
-            pageConfigs: {}, // Stores rows/cols specifically for each page
-            globalStyle: { fontSize: 13, fontWeight: 800, borderWidth: 3.5, emptyBorderWidth: 3, lineWidth: 2.5 },
+            pageConfigs: {}, 
+            pageExtras: {},  
+            globalStyle: { 
+                fontSize: 13, fontWeight: 800, borderWidth: 3.5, emptyBorderWidth: 3, lineWidth: 2.5,
+                hfFontSize: 13, hfFontWeight: 700, hfBorderWidth: 2
+            },
             headerData: { mauja: '', hNo: '', tehsil: '', zila: '', saal: '' },
             pages: {},
             activePage: "page-0",
@@ -386,25 +460,46 @@
             isListening: false
         };
 
+        function showToast(msg, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, duration);
+        }
+
         function ensureStateMigrations() {
-            // Apply fallbacks for missing parameters so older JSON loads perfectly
             if (!state.gridParams) state.gridParams = { rows: 7, cols: 7 };
             if (!state.pageConfigs) state.pageConfigs = {};
-            if (!state.globalStyle) state.globalStyle = { fontSize: 13, fontWeight: 800, borderWidth: 3.5, emptyBorderWidth: 3, lineWidth: 2.5 };
-            if (state.globalStyle.emptyBorderWidth === undefined) state.globalStyle.emptyBorderWidth = 3;
-            if (state.globalStyle.lineWidth === undefined) state.globalStyle.lineWidth = 2.5;
+            if (!state.pageExtras) state.pageExtras = {};
             if (!state.headerData) state.headerData = { mauja: '', hNo: '', tehsil: '', zila: '', saal: '' };
             if (!state.links) state.links = [];
             
+            // Fix for importing older data that lacks specific fields inside globalStyle
+            if (!state.globalStyle) {
+                state.globalStyle = { fontSize: 13, fontWeight: 800, borderWidth: 3.5, emptyBorderWidth: 3, lineWidth: 2.5, hfFontSize: 13, hfFontWeight: 700, hfBorderWidth: 2 };
+            } else {
+                if (state.globalStyle.hfFontSize === undefined) state.globalStyle.hfFontSize = 13;
+                if (state.globalStyle.hfFontWeight === undefined) state.globalStyle.hfFontWeight = 700;
+                if (state.globalStyle.hfBorderWidth === undefined) state.globalStyle.hfBorderWidth = 2;
+                if (state.globalStyle.emptyBorderWidth === undefined) state.globalStyle.emptyBorderWidth = 3;
+                if (state.globalStyle.lineWidth === undefined) state.globalStyle.lineWidth = 2.5;
+            }
+
             Object.keys(state.pages || {}).forEach(pId => {
                 if (!state.pageConfigs[pId]) {
                     state.pageConfigs[pId] = { cols: state.gridParams.cols, rows: state.gridParams.rows };
+                }
+                if (!state.pageExtras[pId]) {
+                    state.pageExtras[pId] = { hData: {}, fData: {} };
+                } else if (state.pageExtras[pId].headerText !== undefined) {
+                    state.pageExtras[pId] = { hData: {}, fData: {} };
                 }
             });
         }
 
         window.onload = () => {
             state.pageConfigs["page-0"] = { cols: 7, rows: 7 };
+            state.pageExtras["page-0"] = { hData: {}, fData: {} };
             ensureStateMigrations();
             applyGlobalStyles();
             
@@ -432,9 +527,14 @@
             }
         }
 
-        // ==========================================
-        // REFLOW: Applies to ALL Pages globally
-        // ==========================================
+        // Updated signature: Using a specific key rather than (r, c)
+        function saveHF(pId, type, key, val) {
+            if(!state.pageExtras) state.pageExtras = {};
+            if(!state.pageExtras[pId]) state.pageExtras[pId] = { hData: {}, fData: {} };
+            if(!state.pageExtras[pId][type]) state.pageExtras[pId][type] = {};
+            state.pageExtras[pId][type][key] = val;
+        }
+
         function reflowData(newCols, newRows) {
             const oldCols = state.gridParams.cols;
             const oldRows = state.gridParams.rows;
@@ -443,13 +543,15 @@
 
             const newPages = {};
             const posMap = {}; 
-            const newPageConfigs = {};
+            const newPageExtras = {}; 
 
             Object.keys(state.pages).forEach(pId => {
                 const pageIdx = parseInt(pId.split('-')[1]);
+                if(state.pageExtras[pId]) newPageExtras[pId] = JSON.parse(JSON.stringify(state.pageExtras[pId]));
+
                 Object.keys(state.pages[pId]).forEach(pos => {
                     const [r, c] = pos.split('-').map(Number);
-                    const data = state.pages[pId][pos];
+                    const data = state.pages[pId];
                     
                     const absC = pageIdx * oldCols + c;
                     const newPageIdx = Math.floor(absC / newCols);
@@ -461,7 +563,7 @@
                         const newPos = `${newLocalR}-${newLocalC}`;
                         
                         if (!newPages[newPId]) newPages[newPId] = {};
-                        newPages[newPId][newPos] = data;
+                        newPages[newPId][newPos] = data[pos];
                         
                         posMap[`${pId}|${pos}`] = { page: newPId, pos: newPos };
                     }
@@ -496,6 +598,9 @@
                 const pId = `page-${i}`;
                 if(!state.pages[pId]) state.pages[pId] = {};
                 state.pageConfigs[pId] = { cols: newCols, rows: newRows };
+                if(newPageExtras[pId]) state.pageExtras[pId] = newPageExtras[pId];
+                else state.pageExtras[pId] = { hData: {}, fData: {} };
+
                 addPage(pId, true); 
             }
             
@@ -530,9 +635,6 @@
             document.getElementById('grid-rows-display').textContent = state.gridParams.rows;
         }
 
-        // ==========================================
-        // UPDATE SPECIFIC PAGE ONLY
-        // ==========================================
         function updateCurrentPageGrid(type, change) {
             const pId = state.activePage;
             if (!state.pageConfigs[pId]) return;
@@ -544,26 +646,13 @@
             document.getElementById('current-page-cols-display').textContent = conf.cols;
             document.getElementById('current-page-rows-display').textContent = conf.rows;
 
-            // Re-render ONLY this page's HTML structure
-            const grid = document.getElementById(`grid-${pId}`);
-            if(!grid) return;
-            
-            grid.style.gridTemplateColumns = `repeat(${conf.cols}, minmax(0, 1fr))`;
-            grid.innerHTML = ''; 
-            
-            for (let r = 0; r < conf.rows; r++) {
-                for (let c = 0; c < conf.cols; c++) {
-                    const pos = `${r}-${c}`;
-                    const cellDiv = document.createElement('div');
-                    cellDiv.id = `cell-${pId}-${pos}`;
-                    cellDiv.className = "excel-cell";
-                    cellDiv.onclick = () => handleCellClick(pId, r, c);
-                    grid.appendChild(cellDiv);
-                }
+            const pageEl = document.getElementById(pId);
+            if(pageEl) {
+                renderPageHTML(pId, pageEl);
+                Object.keys(state.pages[pId] || {}).forEach(pos => renderCell(pId, pos));
+                calculateLines();
+                renderAllHeaders();
             }
-            
-            Object.keys(state.pages[pId] || {}).forEach(pos => renderCell(pId, pos));
-            calculateLines();
         }
 
         function updateHeaderData() {
@@ -589,7 +678,6 @@
             state.globalStyle[prop] = parseFloat(val) || val;
             applyGlobalStyles();
             
-            // Re-render because dynamic borders change geometry
             Object.keys(state.pages).forEach(pId => {
                 Object.keys(state.pages[pId]).forEach(pos => renderCell(pId, pos));
             });
@@ -597,18 +685,31 @@
         }
 
         function applyGlobalStyles() {
-            if (!state.globalStyle) state.globalStyle = { fontSize: 13, fontWeight: 800, borderWidth: 3.5, emptyBorderWidth: 3, lineWidth: 2.5 };
             const root = document.documentElement;
+            
             root.style.setProperty('--global-fs', `${state.globalStyle.fontSize}px`);
             root.style.setProperty('--global-fw', state.globalStyle.fontWeight);
             root.style.setProperty('--global-bw', `${state.globalStyle.borderWidth}px`);
-            root.style.setProperty('--empty-bw', `${state.globalStyle.emptyBorderWidth}px`);
+            root.style.setProperty('--empty-bw', `${state.globalStyle.emptyBorderWidth || 3}px`);
             
-            document.getElementById('global-fs').value = state.globalStyle.fontSize;
-            document.getElementById('global-fw').value = state.globalStyle.fontWeight;
-            document.getElementById('global-bw').value = state.globalStyle.borderWidth;
-            document.getElementById('global-ebw').value = state.globalStyle.emptyBorderWidth || 3;
-            document.getElementById('global-lw').value = state.globalStyle.lineWidth || 2.5;
+            // Safe fallback logic for older imports
+            const hfFs = state.globalStyle.hfFontSize !== undefined ? state.globalStyle.hfFontSize : 13;
+            const hfFw = state.globalStyle.hfFontWeight !== undefined ? state.globalStyle.hfFontWeight : 700;
+            const hfBw = state.globalStyle.hfBorderWidth !== undefined ? state.globalStyle.hfBorderWidth : 2;
+
+            root.style.setProperty('--hf-fs', `${hfFs}px`);
+            root.style.setProperty('--hf-fw', hfFw);
+            root.style.setProperty('--hf-bw', `${hfBw}px`);
+            
+            if(document.getElementById('global-fs')) document.getElementById('global-fs').value = state.globalStyle.fontSize;
+            if(document.getElementById('global-fw')) document.getElementById('global-fw').value = state.globalStyle.fontWeight;
+            if(document.getElementById('global-bw')) document.getElementById('global-bw').value = state.globalStyle.borderWidth;
+            if(document.getElementById('global-ebw')) document.getElementById('global-ebw').value = state.globalStyle.emptyBorderWidth || 3;
+            if(document.getElementById('global-lw')) document.getElementById('global-lw').value = state.globalStyle.lineWidth || 2.5;
+
+            if(document.getElementById('hf-fs')) document.getElementById('hf-fs').value = hfFs;
+            if(document.getElementById('hf-fw')) document.getElementById('hf-fw').value = hfFw;
+            if(document.getElementById('hf-bw')) document.getElementById('hf-bw').value = hfBw;
         }
 
         function updateLocalStyle(prop, val) {
@@ -640,22 +741,66 @@
             document.getElementById('canvas-wrapper').style.zoom = val; 
         }
 
-        function addPage(pId, preventSwitch = false) {
-            if (!state.pages[pId]) state.pages[pId] = {};
-            if (!state.pageConfigs[pId]) state.pageConfigs[pId] = { cols: state.gridParams.cols, rows: state.gridParams.rows };
-            
+        function renderPageHTML(pId, pageDiv) {
             const conf = state.pageConfigs[pId];
+            if (!state.pageExtras) state.pageExtras = {};
+            if (!state.pageExtras[pId]) state.pageExtras[pId] = { hData: {}, fData: {} };
             
-            const wrapper = document.getElementById('pages-wrapper');
-            const pageDiv = document.createElement('div');
-            pageDiv.id = pId;
-            pageDiv.className = "page-container bg-white shadow-xl border border-gray-400 p-8 min-w-max rounded-sm mx-auto flex flex-col justify-between min-h-[90vh] mb-8";
+            const hData = state.pageExtras[pId].hData || {};
+            const fData = state.pageExtras[pId].fData || {};
             
+            // Calculate total spanning width of the grid (Cells + Gaps)
+            const totalWidth = (conf.cols * 160) + ((conf.cols - 1) * 40);
+
+            // Connect columns into single full-width writing boxes per row
+            let headerGridRows = '';
+            for(let r=0; r<2; r++) {
+                let val = hData[`row-${r}`];
+                // Fallback to migrate old multi-column data smoothly
+                if (val === undefined) {
+                    let oldParts = [];
+                    for(let c=0; c<conf.cols; c++) {
+                        if (hData[`${r}-${c}`]) oldParts.push(hData[`${r}-${c}`]);
+                    }
+                    val = oldParts.join('  ').trim();
+                }
+
+                headerGridRows += `
+                    <div class="flex justify-center hf-border-b">
+                        <div class="flex w-full" style="width: ${totalWidth}px;">
+                            <div contenteditable="true" class="hf-cell flex-1" style="min-height: 30px;" oninput="saveHF('${pId}', 'hData', 'row-${r}', this.innerText)">${val}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Connect columns into single full-width writing boxes per row
+            let footerGridRows = '';
+            for(let r=0; r<2; r++) {
+                let val = fData[`row-${r}`];
+                // Fallback to migrate old multi-column data smoothly
+                if (val === undefined) {
+                    let oldParts = [];
+                    for(let c=0; c<conf.cols; c++) {
+                        if (fData[`${r}-${c}`]) oldParts.push(fData[`${r}-${c}`]);
+                    }
+                    val = oldParts.join('  ').trim();
+                }
+
+                const borderClass = r === 1 ? '' : 'hf-border-b';
+                footerGridRows += `
+                    <div class="flex justify-center ${borderClass}">
+                        <div class="flex w-full" style="width: ${totalWidth}px;">
+                            <div contenteditable="true" class="hf-cell flex-1" style="min-height: 30px;" oninput="saveHF('${pId}', 'fData', 'row-${r}', this.innerText)">${val}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
             pageDiv.innerHTML = `
-                <div class="w-full border-t-2 border-x-2 border-black z-20 relative bg-white shrink-0">
-                    <div id="dynamic-header-${pId}" class="excel-row-header text-center text-xl font-extrabold text-black tracking-wide"></div>
-                    <div contenteditable="true" class="excel-row-header text-center text-lg font-bold text-black">&nbsp;</div>
-                    <div contenteditable="true" class="excel-row-header text-center text-lg font-bold text-black">&nbsp;</div>
+                <div class="w-full hf-container-top z-20 relative bg-white shrink-0 flex flex-col">
+                    <div id="dynamic-header-${pId}" class="excel-row-header text-center text-black tracking-wide hf-border-b"></div>
+                    ${headerGridRows}
                 </div>
                 
                 <div class="flex flex-1 justify-center items-center w-full my-8">
@@ -665,15 +810,12 @@
                     </div>
                 </div>
                 
-                <div class="w-full border-t-2 border-x-2 border-black z-20 relative bg-white shrink-0">
-                    <div contenteditable="true" class="excel-row-header text-right font-bold text-lg text-black">&nbsp;</div>
-                    <div contenteditable="true" class="excel-row-header text-right font-bold text-lg text-black">&nbsp;</div>
+                <div class="w-full hf-container-bottom z-20 relative bg-white shrink-0 flex flex-col">
+                    ${footerGridRows}
                 </div>
             `;
-            wrapper.appendChild(pageDiv);
-            renderAllHeaders();
 
-            const grid = document.getElementById(`grid-${pId}`);
+            const grid = pageDiv.querySelector(`#grid-${pId}`);
             for (let r = 0; r < conf.rows; r++) {
                 for (let c = 0; c < conf.cols; c++) {
                     const pos = `${r}-${c}`;
@@ -684,13 +826,30 @@
                     grid.appendChild(cellDiv);
                 }
             }
+        }
+
+        function addPage(pId, preventSwitch = false) {
+            if (!state.pages[pId]) state.pages[pId] = {};
+            if (!state.pageConfigs[pId]) state.pageConfigs[pId] = { cols: state.gridParams.cols, rows: state.gridParams.rows };
+            if (!state.pageExtras) state.pageExtras = {};
+            if (!state.pageExtras[pId]) state.pageExtras[pId] = { hData: {}, fData: {} };
+            
+            const wrapper = document.getElementById('pages-wrapper');
+            const pageDiv = document.createElement('div');
+            pageDiv.id = pId;
+            pageDiv.className = "page-container bg-white shadow-xl border border-gray-400 p-8 min-w-max rounded-sm mx-auto flex flex-col justify-between min-h-[90vh] mb-8";
+            
+            wrapper.appendChild(pageDiv);
+            renderPageHTML(pId, pageDiv);
+            renderAllHeaders();
+
             if (!preventSwitch) switchPage(pId);
         }
 
         function deleteCurrentPage() {
             const pageIds = Object.keys(state.pages);
             if (pageIds.length <= 1) {
-                alert("अंतिम पेज को नहीं हटाया जा सकता। (Cannot delete the last page)");
+                showToast("अंतिम पेज को नहीं हटाया जा सकता। (Cannot delete the last page)");
                 return;
             }
             if (!confirm("क्या आप वाकई इस पेज को हटाना चाहते हैं?")) return;
@@ -700,6 +859,7 @@
             state.links = state.links.filter(l => l.from.page !== pId && l.to.page !== pId);
             delete state.pages[pId];
             delete state.pageConfigs[pId];
+            if (state.pageExtras) delete state.pageExtras[pId];
             
             const pageEl = document.getElementById(pId);
             if(pageEl) pageEl.remove();
@@ -745,7 +905,6 @@
             
             if (hasContent) {
                 cell.classList.add('has-data');
-                // The square boundary is retained for the wife cell, and its background is transparent
                 if (data.type === 'wife' || data.type === 'female') {
                     cell.style.backgroundColor = 'transparent';
                 } else {
@@ -774,14 +933,20 @@
             const lines = data.name.split('\n');
             const textHtml = `<strong>${escapeHtml(lines[0])}</strong>${lines.slice(1).map(l => `<span>${escapeHtml(l)}</span>`).join('')}`;
             
+            const isVert = data.isVertical;
+            const rotateClass = isVert ? ' rotate-270' : '';
+            
+            let femalePadding = isVert ? '' : ' pt-[14px]';
+            let wifeStyle = (data.type === 'wife' && !isVert) ? ' style="padding-left: 32px; padding-right: 15px;"' : '';
+            
             if (data.type === 'female') {
                 cell.insertAdjacentHTML('beforeend', `<svg class="absolute inset-0 w-full h-full symbol-bg" viewBox="0 0 160 80"><polygon points="80,0 70,15 90,15" fill="#ffffff" stroke="#1e3a2f" stroke-width="${Math.max(1.8, bw/2)}"/></svg>`);
-                cell.insertAdjacentHTML('beforeend', `<div class="text-content absolute inset-0 pt-[14px]">${textHtml}</div>`);
+                cell.insertAdjacentHTML('beforeend', `<div class="text-content absolute inset-0${femalePadding}${rotateClass}">${textHtml}</div>`);
             } else if (data.type === 'wife') {
                 cell.insertAdjacentHTML('beforeend', `<svg class="absolute inset-0 w-full h-full symbol-bg" viewBox="0 0 160 80"><path d="M 25 40 C 5 -5, 80 -5, 150 40 C 80 85, 5 85, 25 40 Z" fill="#ffffff" stroke="#1e3a2f" stroke-width="${bw}"/></svg>`);
-                cell.insertAdjacentHTML('beforeend', `<div class="text-content absolute inset-0" style="padding-left: 32px; padding-right: 15px;">${textHtml}</div>`);
+                cell.insertAdjacentHTML('beforeend', `<div class="text-content absolute inset-0${rotateClass}"${wifeStyle}>${textHtml}</div>`);
             } else {
-                cell.insertAdjacentHTML('beforeend', `<div class="text-content absolute inset-0">${textHtml}</div>`);
+                cell.insertAdjacentHTML('beforeend', `<div class="text-content absolute inset-0${rotateClass}">${textHtml}</div>`);
             }
         }
         
@@ -818,11 +983,9 @@
                         const lC = isLeftToRight ? c1 : c2;
                         const rC = isLeftToRight ? c2 : c1;
                         
-                        // Start point right on the rectangular bounds or specific symbol bounds
                         let sX = lC.right;
                         let eX = rC.left;
                         
-                        // Because Wife shape background is transparent, we can pierce into the box to touch the symbol perfectly
                         if(lD?.type === 'wife') sX = lC.left + 150 + (getCellBorderWidth(lD)/2);
                         if(rD?.type === 'wife') eX = rC.left + 25 - (getCellBorderWidth(rD)/2);
                         
@@ -942,6 +1105,15 @@
                 document.getElementById('local-fw').value = '';
                 document.getElementById('local-bw').value = '';
             }
+
+            const btnVertical = document.getElementById('btn-vertical');
+            if (data && data.isVertical) {
+                btnVertical.classList.replace('bg-white', 'bg-slate-300');
+                btnVertical.classList.add('border-slate-600');
+            } else {
+                btnVertical.classList.replace('bg-slate-300', 'bg-white');
+                btnVertical.classList.remove('border-slate-600');
+            }
         }
         
         function handleManualEntry() {
@@ -954,6 +1126,17 @@
         function setEntryType(t) {
             state.pages[state.activePage][state.selectedPos] = { ...(state.pages[state.activePage][state.selectedPos] || {name:''}), type: t };
             renderCell(state.activePage, state.selectedPos); calculateLines();
+        }
+
+        function toggleVertical() {
+            if (!state.selectedPos || !state.activePage) return;
+            if (!state.pages[state.activePage][state.selectedPos]) {
+                state.pages[state.activePage][state.selectedPos] = { type: 'male', name: '' };
+            }
+            const data = state.pages[state.activePage][state.selectedPos];
+            data.isVertical = !data.isVertical;
+            renderCell(state.activePage, state.selectedPos);
+            updateSelectionUI();
         }
         
         function toggleLinkMode() {
@@ -990,8 +1173,71 @@
         }
         
         function handleExport() {
+            if(document.activeElement && document.activeElement.hasAttribute('contenteditable')) {
+                document.activeElement.blur();
+            }
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(state)], {type:'application/json'}));
             a.download = 'Shajra_Pro_Data.json'; a.click();
+            showToast("डेटा सफलतापूर्वक निर्यात (Exported) हो गया!");
+        }
+
+        function handleMerge(e) {
+            const files = e.target.files;
+            if(!files || files.length === 0) return;
+
+            let loadedCount = 0;
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const importedState = JSON.parse(ev.target.result);
+                        let maxIdx = -1;
+                        Object.keys(state.pages).forEach(p => {
+                            const idx = parseInt(p.split('-')[1]);
+                            if (idx > maxIdx) maxIdx = idx;
+                        });
+                        const offset = maxIdx + 1;
+                        
+                        const pageMap = {};
+                        Object.keys(importedState.pages || {}).forEach(oldP => {
+                            const oldIdx = parseInt(oldP.split('-')[1]);
+                            const newP = `page-${oldIdx + offset}`;
+                            pageMap[oldP] = newP;
+                            
+                            state.pages[newP] = importedState.pages[oldP];
+                            state.pageConfigs[newP] = importedState.pageConfigs?.[oldP] || { cols: state.gridParams.cols, rows: state.gridParams.rows };
+                            state.pageExtras[newP] = importedState.pageExtras?.[oldP] || { hData: {}, fData: {} };
+                        });
+                        
+                        (importedState.links || []).forEach(link => {
+                            if (pageMap[link.from.page] && pageMap[link.to.page]) {
+                                state.links.push({
+                                    from: { page: pageMap[link.from.page], pos: link.from.pos },
+                                    to: { page: pageMap[link.to.page], pos: link.to.pos }
+                                });
+                            }
+                        });
+                        
+                        Object.keys(pageMap).forEach(oldP => {
+                            addPage(pageMap[oldP], true);
+                            Object.keys(state.pages[pageMap[oldP]]).forEach(pos => renderCell(pageMap[oldP], pos));
+                        });
+                        
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            renderTabs();
+                            calculateLines();
+                            toggleSidebar();
+                            showToast("सभी पार्ट्स सफलतापूर्वक जोड़ (Merged) दिए गए हैं!");
+                        }
+                    } catch(err) {
+                        console.error("Merge Error:", err);
+                        showToast("मर्ज करने में त्रुटि! (Merge Error)");
+                    }
+                };
+                reader.readAsText(file);
+            });
+            e.target.value = '';
         }
         
         function handleImport(e) {
@@ -1020,9 +1266,10 @@
                     calculateLines();
                     renderAllHeaders();
                     toggleSidebar(); 
+                    showToast("फ़ाइल सफलतापूर्वक आयात (Imported) हो गई!");
                 } catch(err) { 
                     console.error("Import Error:", err);
-                    alert("अमान्य फ़ाइल या डेटा में त्रुटि (Invalid File Data):\n" + err.message); 
+                    showToast("अमान्य फ़ाइल या डेटा में त्रुटि (Invalid File Data)"); 
                 }
             }; reader.readAsText(file); e.target.value = '';
         }
